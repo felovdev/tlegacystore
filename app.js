@@ -20,7 +20,7 @@ function draw(){let a=filtered();$("resultCount").textContent=a.length+" зап�
 function archiveQuery(){
  const raw=v("searchInput");
  if(!raw)return "collection:ipaarchive";
- const phrase=raw.replace(/\\/g,"\\\\").replace(/"/g,'\\"').replace(/[+\-!(){}\[\]^~*?:\/]/g,"\\$&");
+ const phrase=raw.replaceAll("\\"," ").replaceAll('"'," ").trim();
  return 'collection:ipaarchive AND (title:"'+phrase+'" OR identifier:"'+phrase+'" OR description:"'+phrase+'" OR subject:"'+phrase+'")';
 }
 async function load(){
