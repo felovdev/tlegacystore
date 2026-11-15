@@ -1,10 +1,27 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function admin() { return signedIn() && request.auth.token.admin == true; }
+    function passwordUser() {
+      return signedIn() && request.auth.token.firebase.sign_in_provider == "password";
+    }
+    function userDoc() {
+      return /databases/$(database)/documents/users/$(request.auth.uid);
+    }
+    function notBanned() {
+      return signedIn() && (
+        !exists(userDoc()) ||
+        get(userDoc()).data.banned != true ||
+        (get(userDoc()).data.banUntil != null &&
+         get(userDoc()).data.banUntil <= request.time)
+      );
+    }
+
     match /comments/{commentId} {
       allow read: if true;
-      allow create: if
-        request.resource.data.keys().hasOnly(['itemId','name','message','createdAt'])
+      allow create: if signedIn() && notBanned()
+        && request.resource.data.keys().hasOnly(['itemId','name','message','createdAt','ownerUid','isGuest'])
         && request.resource.data.itemId is string
         && request.resource.data.itemId.size() > 0
         && request.resource.data.itemId.size() <= 200
@@ -14,8 +31,43 @@ service cloud.firestore {
         && request.resource.data.message is string
         && request.resource.data.message.size() >= 1
         && request.resource.data.message.size() <= 500
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.isGuest is bool
         && request.resource.data.createdAt == request.time;
-      allow update, delete: if false;
+      allow update: if admin() ||
+        (passwordUser() && notBanned() &&
+         resource.data.ownerUid == request.auth.uid &&
+         request.resource.data.ownerUid == resource.data.ownerUid &&
+         request.resource.data.itemId == resource.data.itemId &&
+         request.resource.data.createdAt == resource.data.createdAt &&
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['message']));
+      allow delete: if admin() ||
+        (passwordUser() && resource.data.ownerUid == request.auth.uid);
+    }
+
+    match /users/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || admin());
+      allow create, update: if signedIn() && request.auth.uid == uid
+        && passwordUser()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['avatarUrl','bio','updatedAt']);
+      allow delete: if admin();
+    }
+    match /guestProfiles/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow write: if false;
+    }
+    match /site/{docId} {
+      allow read: if docId == "announcement";
+      allow write: if false;
+    }
+    match /system/{docId} {
+      allow read, write: if false;
+    }
+    match /usernames/{username} {
+      allow read, write: if false;
+    }
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
