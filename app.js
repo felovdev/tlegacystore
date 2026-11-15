@@ -14,8 +14,58 @@ function draw(){let a=filtered();$("resultCount").textContent=a.length+" зап�
 async function load(){if(busy)return;busy=true;say("Загружаю Internet Archive…");try{let p=new URLSearchParams({q:"collection:ipaarchive",fl:"identifier,title,description,date,year,subject,collection",rows:PAGE,page,output:"json",sort:"date desc"}),r=await fetch("https://archive.org/advancedsearch.php?"+p);if(!r.ok)throw Error(r.status);let d=await r.json();rows=d.response.docs||[];total=d.response.numFound||0;draw()}catch(e){say("Не удалось загрузить каталог. Попробуй обновить страницу.");console.error(e)}finally{busy=false;$("prevPage").disabled=page<=1;$("nextPage").disabled=page*PAGE>=total}}
 function detailHTML(d,id){let m=d.metadata||{},files=(d.files||[]).filter(f=>String(f.name||"").toLowerCase().endsWith(".ipa")),all=JSON.stringify(m).toLowerCase(),desc=String(m.description||"").replace(/<[^>]*>/g," ").replace(/\s+/g," ").trim(),yr=String(m.date||m.year||"").match(/(?:19|20)\d{2}/),iv=(all.match(/(?:ios|iphone\s*os)[\s:=_-]*(\d{1,2}(?:\.\d{1,2})?)/i)||[])[1]||"Не указана";$("detailContent").innerHTML='<article class="detail"><h1>'+esc(m.title||id)+'</h1><div class="muted">Archive identifier: '+esc(id)+'</div><div class="detail-grid"><div><p>'+esc(desc||"Описание отсутствует.")+'</p><table class="meta-table"><tr><td>Год</td><td>'+esc(yr?yr[0]:"Не указан")+'</td></tr><tr><td>Предполагаемая iOS</td><td>'+esc(iv)+'</td></tr><tr><td>Decrypted</td><td>'+(/decrypted/.test(all)?"Упоминается в метаданных":"Не подтверждено")+'</td></tr><tr><td>Cracked</td><td>'+(/cracked/.test(all)?"Упоминается в метаданных":"Не подтверждено")+'</td></tr><tr><td>Оригинал</td><td><a target="_blank" rel="noopener" href="https://archive.org/details/'+encodeURIComponent(id)+'">Archive.org</a></td></tr></table><h2>Файлы IPA ('+files.length+')</h2>'+(files.length?'<ul class="file-list">'+files.map(f=>'<li><a target="_blank" rel="noopener" href="https://archive.org/download/'+encodeURIComponent(id)+'/'+encodeURIComponent(f.name)+'">'+esc(f.name)+'</a> <span class="muted">'+(f.size?Math.round(+f.size/104857.6)/10+" MB":"")+'</span></li>').join("")+'</ul>':'<p class="muted">IPA-файлы не найдены.</p>')+'</div><aside class="detail-side"><img src="https://archive.org/services/img/'+encodeURIComponent(id)+'" alt="Обложка"><p><a target="_blank" rel="noopener" href="https://archive.org/details/'+encodeURIComponent(id)+'">Открыть оригинал ↗</a></p></aside></div><section class="comments"><h2>Комментарии</h2><div id="commentNotice" class="muted"></div><div id="commentList">Загрузка…</div><form id="commentForm"><label for="commentName">Имя (до 40 символов)</label><input id="commentName" maxlength="40" required><label for="commentMessage">Сообщение (до 500 символов)</label><textarea id="commentMessage" maxlength="500" required></textarea><div class="comment-tools"><span id="charCounter" class="counter">0 / 500</span><span id="cooldownLabel" class="cooldown"></span></div><button id="sendComment" type="submit">Отправить</button></form></section></article>';comments(id)}
 async function openDetail(id){$("homeView").classList.add("hidden");$("detailView").classList.remove("hidden");try{let r=await fetch("https://archive.org/metadata/"+encodeURIComponent(id));if(!r.ok)throw Error(r.status);detailHTML(await r.json(),id)}catch(e){$("detailContent").textContent="Не удалось загрузить запись."}}
-function comments(item){let $n=$("commentNotice"),$list=$("commentList"),$form=$("commentForm"),$msg=$("commentMessage"),$name=$("commentName"),$send=$("sendComment"),$count=$("charCounter"),$timer=$("cooldownLabel"),key="ipa-comment-last-send",wait=20000,last=+(localStorage.getItem(key)||0);$msg.addEventListener("input",()=>$count.textContent=$msg.value.length+" / 500");function clock(){let left=Math.max(0,wait-(Date.now()-last));$send.disabled=left>0||!db;$timer.textContent=left?"Повторная отправка через "+Math.ceil(left/1000)+" сек.":""}clock();setInterval(clock,500);if(!db){$n.textContent="Настрой Firebase: см. README.md и firebase-config.js.";$list.textContent="Общие комментарии пока отключены.";$send.disabled=true;return}
-db.collection("comments").where("itemId","==",item).limit(100).onSnapshot(s=>{let docs=s.docs.slice().sort((a,b)=>{let x=a.data().createdAt,y=b.data().createdAt;return (y&&y.toMillis?y.toMillis():0)-(x&&x.toMillis?x.toMillis():0)});$list.innerHTML=docs.length?docs.map(doc=>{let c=doc.data(),dt=c.createdAt&&c.createdAt.toDate?c.createdAt.toDate().toLocaleString():"";return '<div class="comment"><strong>'+esc(c.name)+'</strong><time>'+esc(dt)+'</time><div class="comment-body">'+esc(c.message)+'</div></div>'}).join(""):"Пока нет комментариев. Будь первым!"},e=>{$list.textContent="Ошибка чтения Firestore. Проверь правила.";console.error(e)});
-$form.addEventListener("submit",async e=>{e.preventDefault();let n=$name.value.trim(),m=$msg.value.trim();if(!n||n.length>40||!m||m.length>500){$n.textContent="Имя: до 40 символов, сообщение: до 500.";return}if(Date.now()-last<wait){clock();return}$send.disabled=true;$n.textContent="Отправка…";try{await db.collection("comments").add({itemId:item,name:n,message:m,createdAt:firebase.firestore.FieldValue.serverTimestamp()});last=Date.now();localStorage.setItem(key,String(last));$msg.value="";$count.textContent="0 / 500";$n.textContent="Комментарий опубликован.";clock()}catch(e){$n.textContent="Ошибка отправки. Проверь правила Firestore.";console.error(e);clock()}})}
+function comments(item){
+ const $n=$("commentNotice"),$list=$("commentList"),$form=$("commentForm"),$msg=$("commentMessage"),$name=$("commentName"),$send=$("sendComment"),$count=$("charCounter"),$timer=$("cooldownLabel");
+ $name.disabled=true;$name.placeholder="Имя назначается автоматически";$name.value="";
+ $n.textContent="Подключаем гостевой профиль…";
+ const key="tls-comment-last-send",wait=20000;
+ let last=+(localStorage.getItem(key)||0),unsubscribe=null;
+ $msg.addEventListener("input",()=>$count.textContent=$msg.value.length+" / 500");
+ function clock(){let left=Math.max(0,wait-(Date.now()-last));$send.disabled=left>0||!db;$timer.textContent=left?"Повторная отправка через "+Math.ceil(left/1000)+" сек.":""}
+ clock();
+ if(!db){$n.textContent="Комментарии временно недоступны: Firebase не подключён.";$list.textContent="";$send.disabled=true;return}
+ (async()=>{
+  if(window.TLS_READY)await window.TLS_READY;
+  const auth=firebase.auth(),user=auth.currentUser;
+  if(!user){$n.textContent="Не удалось создать гостевой профиль. Обнови страницу.";$send.disabled=true;return}
+  let displayName="Гость";
+  if(user.isAnonymous){
+   displayName=window.TLS_STATE.guestName||"Гость";
+   $n.textContent="Ты пишешь как "+displayName+". Зарегистрируйся, чтобы получить возможность редактировать и удалять свои комментарии.";
+  }else{
+   const p=await db.collection("users").doc(user.uid).get();
+   displayName=(p.exists&&p.data().username)||"Пользователь";
+   $n.textContent="Ты вошёл как "+displayName+".";
+  }
+  $name.value=displayName;
+  unsubscribe=db.collection("comments").where("itemId","==",item).limit(100).onSnapshot(s=>{
+   let docs=s.docs.slice().sort((x,y)=>{let a=x.data().createdAt,b=y.data().createdAt;return(b&&b.toMillis?b.toMillis():0)-(a&&a.toMillis?a.toMillis():0)});
+   $list.innerHTML=docs.length?docs.map(doc=>{
+    let c=doc.data(),dt=c.createdAt&&c.createdAt.toDate?c.createdAt.toDate().toLocaleString():"",own=c.ownerUid===user.uid&&!user.isAnonymous;
+    return '<div class="comment"><strong>'+esc(c.name)+'</strong><time>'+esc(dt)+'</time><div class="comment-body">'+esc(c.message)+'</div>'+(own?'<div class="comment-actions"><button type="button" data-edit="'+esc(doc.id)+'">Изменить</button> <button type="button" class="secondary" data-delete="'+esc(doc.id)+'">Удалить</button></div>':'')+'</div>'
+   }).join(""):"Пока нет комментариев. Будь первым!";
+   $list.querySelectorAll("[data-edit]").forEach(btn=>btn.onclick=async()=>{
+    const doc=docs.find(x=>x.id===btn.dataset.edit);if(!doc)return;
+    const next=prompt("Измени комментарий:",doc.data().message);if(next===null)return;
+    const msg=next.trim();if(!msg||msg.length>500){alert("Сообщение должно быть от 1 до 500 символов.");return}
+    try{await db.collection("comments").doc(doc.id).update({message:msg})}catch(e){alert("Не удалось изменить комментарий.")}
+   });
+   $list.querySelectorAll("[data-delete]").forEach(btn=>btn.onclick=async()=>{
+    if(!confirm("Удалить свой комментарий?"))return;
+    try{await db.collection("comments").doc(btn.dataset.delete).delete()}catch(e){alert("Не удалось удалить комментарий.")}
+   });
+  },e=>{$list.textContent="Ошибка чтения Firestore. Проверь правила и авторизацию.";console.error(e)});
+  $form.addEventListener("submit",async e=>{
+   e.preventDefault();let m=$msg.value.trim();if(!m||m.length>500){$n.textContent="Сообщение должно быть от 1 до 500 символов.";return}
+   if(Date.now()-last<wait){clock();return}
+   $send.disabled=true;$n.textContent="Отправка…";
+   try{
+    await db.collection("comments").add({itemId:item,name:displayName,message:m,ownerUid:user.uid,isGuest:user.isAnonymous,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+    last=Date.now();localStorage.setItem(key,String(last));$msg.value="";$count.textContent="0 / 500";$n.textContent="Комментарий опубликован.";clock()
+   }catch(e){$n.textContent="Ошибка отправки. Проверь авторизацию и правила Firestore.";console.error(e);clock()}
+  });
+  clock();setInterval(clock,500);
+ })();
+}
 $("searchForm").addEventListener("submit",e=>{e.preventDefault();draw()});$("applyFilters").addEventListener("click",draw);$("resetFilters").addEventListener("click",()=>{["searchInput","iosMin","iosMax","yearFrom","yearTo","category","decrypt","crack"].forEach(x=>$(x).value="");$("sort").value="newest";draw()});$("prevPage").addEventListener("click",()=>{if(page>1){page--;load()}});$("nextPage").addEventListener("click",()=>{if(page*PAGE<total){page++;load()}});let id=new URLSearchParams(location.search).get("id");if(id)openDetail(id);else load()
 })();
