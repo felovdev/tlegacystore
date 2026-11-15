@@ -1,5 +1,5 @@
 (()=>{"use strict";
-const $=id=>document.getElementById(id), esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])), v=id=>$(id).value.trim(), PAGE=50;
+const $=id=>document.getElementById(id), esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])), v=id=>$(id).value.trim(), PAGE=50;
 let page=1,rows=[],total=0,busy=false,db=null;
 const cfg=window.FIREBASE_CONFIG;
 if(cfg&&cfg.apiKey!=="PASTE_API_KEY"&&cfg.projectId!=="YOUR_PROJECT_ID"&&window.firebase){try{firebase.initializeApp(cfg);db=firebase.firestore()}catch(e){console.warn(e)}}
@@ -21,7 +21,7 @@ function archiveQuery(){
  const raw=v("searchInput");
  if(!raw)return "collection:ipaarchive";
  // Restrict text matching to item title and identifier; ignore description/subjects.
- const phrase=raw.replaceAll("\\"," ").replaceAll('"'," ").trim();
+ const phrase=raw.replace(/\\/g," ").replace(/"/g," ").trim();
  return 'collection:ipaarchive AND (title:"'+phrase+'" OR identifier:"'+phrase+'")';
 }
 async function load(){
