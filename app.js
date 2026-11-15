@@ -20,28 +20,38 @@ function draw(){let a=filtered();$("resultCount").textContent=a.length+" зап�
 function archiveQuery(){
  const raw=v("searchInput");
  if(!raw)return "collection:ipaarchive";
- // Search the complete IPA Archive collection on Archive.org, not just the 50
- // records currently loaded in the browser. Quote the phrase and escape Lucene syntax.
- const phrase=raw.replace(/\\/g,"\\\\").replace(/"/g,'\\"').replace(/[+\\-!(){}\\[\\]^~*?:\\/]/g,"\\async function load(){if(busy)return;busy=true;say("Загружаю Internet Archive…");try{let p=new URLSearchParams({q:"collection:ipaarchive",fl:"identifier,title,description,date,year,subject,collection",rows:PAGE,page,output:"json",sort:"date desc"}),r=await fetch("https://archive.org/advancedsearch.php?"+p);if(!r.ok)throw Error(r.status);let d=await r.json();rows=d.response.docs||[];total=d.response.numFound||0;draw()}catch(e){say("Не удалось загрузить каталог. Попробуй обновить страницу.");console.error(e)}finally{busy=false;$("prevPage").disabled=page<=1;$("nextPage").disabled=page*PAGE>=total}}");
+ const phrase=raw.replace(/\\/g,"\\\\").replace(/"/g,'\\"').replace(/[+\-!(){}\[\]^~*?:\/]/g,"\\$&");
  return 'collection:ipaarchive AND (title:"'+phrase+'" OR identifier:"'+phrase+'" OR description:"'+phrase+'" OR subject:"'+phrase+'")';
 }
 async function load(){
  if(busy)return;
- busy=true;say(v("searchInput")?"Ищу по всему каталогу Internet Archive…":"Загружаю каталог…");
+ busy=true;
+ say(v("searchInput")?"Ищу по всему каталогу Internet Archive…":"Загружаю каталог Internet Archive…");
  try{
-  const p=new URLSearchParams({
+  const params=new URLSearchParams({
    q:archiveQuery(),
    fl:"identifier,title,description,date,year,subject,collection",
-   rows:String(PAGE),page:String(page),output:"json",sort:"date desc"
+   rows:String(PAGE),
+   page:String(page),
+   output:"json",
+   sort:"date desc"
   });
-  const r=await fetch("https://archive.org/advancedsearch.php?"+p.toString(),{headers:{Accept:"application/json"}});
-  if(!r.ok)throw Error("Archive.org HTTP "+r.status);
-  const d=await r.json();
-  if(!d.response||!Array.isArray(d.response.docs))throw Error("Некорректный ответ Archive.org");
-  rows=d.response.docs;total=Number(d.response.numFound)||0;draw();
-  if(v("searchInput")&&total===0)say("По запросу «"+v("searchInput")+"» в коллекции IPA не найдено записей. Попробуй другое написание.");
- }catch(e){say("Не удалось выполнить поиск в Internet Archive. Попробуй ещё раз.");console.error("TLegacyStore search:",e)}
- finally{busy=false;$("prevPage").disabled=page<=1;$("nextPage").disabled=page*PAGE>=total}
+  const response=await fetch("https://archive.org/advancedsearch.php?"+params.toString(),{headers:{Accept:"application/json"}});
+  if(!response.ok)throw new Error("Archive.org HTTP "+response.status);
+  const data=await response.json();
+  if(!data.response||!Array.isArray(data.response.docs))throw new Error("Invalid Archive.org response");
+  rows=data.response.docs;
+  total=Number(data.response.numFound)||0;
+  draw();
+  if(v("searchInput")&&total===0)say("По запросу «"+v("searchInput")+"» ничего не найдено в коллекции IPA.");
+ }catch(error){
+  say("Не удалось загрузить каталог. Попробуй обновить страницу.");
+  console.error("TLegacyStore catalog load:",error);
+ }finally{
+  busy=false;
+  $("prevPage").disabled=page<=1;
+  $("nextPage").disabled=page*PAGE>=total;
+ }
 }
 function detailHTML(d,id){let m=d.metadata||{},files=(d.files||[]).filter(f=>String(f.name||"").toLowerCase().endsWith(".ipa")),all=JSON.stringify(m).toLowerCase(),desc=String(m.description||"").replace(/<[^>]*>/g," ").replace(/\s+/g," ").trim(),yr=String(m.date||m.year||"").match(/(?:19|20)\d{2}/),iv=(all.match(/(?:ios|iphone\s*os)[\s:=_-]*(\d{1,2}(?:\.\d{1,2})?)/i)||[])[1]||"Не указана";$("detailContent").innerHTML='<article class="detail"><h1>'+esc(m.title||id)+'</h1><div class="muted">Archive identifier: '+esc(id)+'</div><div class="detail-grid"><div><p>'+esc(desc||"Описание отсутствует.")+'</p><table class="meta-table"><tr><td>Год</td><td>'+esc(yr?yr[0]:"Не указан")+'</td></tr><tr><td>Предполагаемая iOS</td><td>'+esc(iv)+'</td></tr><tr><td>Decrypted</td><td>'+(/decrypted/.test(all)?"Упоминается в метаданных":"Не подтверждено")+'</td></tr><tr><td>Cracked</td><td>'+(/cracked/.test(all)?"Упоминается в метаданных":"Не подтверждено")+'</td></tr><tr><td>Оригинал</td><td><a target="_blank" rel="noopener" href="https://archive.org/details/'+encodeURIComponent(id)+'">Archive.org</a></td></tr></table><h2>Файлы IPA ('+files.length+')</h2>'+(files.length?'<ul class="file-list">'+files.map(f=>'<li><a target="_blank" rel="noopener" href="https://archive.org/download/'+encodeURIComponent(id)+'/'+encodeURIComponent(f.name)+'">'+esc(f.name)+'</a> <span class="muted">'+(f.size?Math.round(+f.size/104857.6)/10+" MB":"")+'</span></li>').join("")+'</ul>':'<p class="muted">IPA-файлы не найдены.</p>')+'</div><aside class="detail-side"><img src="https://archive.org/services/img/'+encodeURIComponent(id)+'" alt="Обложка"><p><a target="_blank" rel="noopener" href="https://archive.org/details/'+encodeURIComponent(id)+'">Открыть оригинал ↗</a></p></aside></div><section class="comments"><h2>Комментарии</h2><div id="commentNotice" class="muted"></div><div id="commentList">Загрузка…</div><form id="commentForm"><label for="commentName">Имя (до 40 символов)</label><input id="commentName" maxlength="40" required><label for="commentMessage">Сообщение (до 500 символов)</label><textarea id="commentMessage" maxlength="500" required></textarea><div class="comment-tools"><span id="charCounter" class="counter">0 / 500</span><span id="cooldownLabel" class="cooldown"></span></div><button id="sendComment" type="submit">Отправить</button></form></section></article>';comments(id)}
 async function openDetail(id){$("homeView").classList.add("hidden");$("detailView").classList.remove("hidden");try{let r=await fetch("https://archive.org/metadata/"+encodeURIComponent(id));if(!r.ok)throw Error(r.status);detailHTML(await r.json(),id)}catch(e){$("detailContent").textContent="Не удалось загрузить запись."}}
