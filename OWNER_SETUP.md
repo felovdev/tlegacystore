@@ -24,7 +24,7 @@ Cloud Functions требуют план Firebase **Blaze** (оплата по ф
 
 1. Откройте сайт и зарегистрируйте отдельный аккаунт `adminchik` с новым уникальным паролем. Не используйте пароль, который ранее отправляли в чат.
 2. Создайте service-account key в Firebase Console → Project settings → Service accounts. Скачайте его на свой компьютер и не добавляйте в репозиторий.
-3. Установите зависимости в корне проекта или в отдельной папке с Firebase Admin SDK.
+3. В терминале из корня репозитория выполните `cd functions && npm install && cd ..`.
 4. Установите переменную окружения на локальном компьютере и запустите скрипт:
 ```sh
 GOOGLE_APPLICATION_CREDENTIALS=/absolute/path/service-account.json node scripts/set-admin.js adminchik
