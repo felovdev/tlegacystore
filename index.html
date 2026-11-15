@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#263746">
+<meta name="description" content="IPA Catalog — поиск архивных iOS-приложений и игр">
+<title>IPA Catalog</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="site-header"><div class="wrap header-inner"><a class="logo" href="./">IPA CATALOG</a><span class="header-sub">iOS apps archive</span><a class="github-link" href="https://github.com/felovdev/tlegacystore">GitHub</a></div></header>
+<div class="wrap">
+<main id="homeView">
+<section class="intro"><h1>Каталог IPA-приложений</h1><p>Поиск приложений и игр из архивных коллекций. Выбери запись, чтобы посмотреть подробности, файлы и комментарии.</p></section>
+<form id="searchForm" class="searchbar"><input id="searchInput" type="search" placeholder="Поиск по названию…" autocomplete="off"><button type="submit">Найти</button></form>
+<div class="layout">
+<aside class="filters">
+<div class="filter-title"><h2>Фильтры</h2><button id="resetFilters" class="text-button" type="button">Сбросить</button></div>
+<label>Версия iOS от<input id="iosMin" placeholder="например, 5.0"></label>
+<label>Версия iOS до<input id="iosMax" placeholder="например, 12.4"></label>
+<div class="year-grid"><label>Год от<input id="yearFrom" type="number" placeholder="2008"></label><label>Год до<input id="yearTo" type="number" placeholder="2024"></label></div>
+<label>Тип<select id="category"><option value="">Все типы</option><option value="game">Игры</option><option value="app">Приложения</option><option value="collection">Сборники игр</option><option value="emulator">Эмуляторы</option><option value="utility">Утилиты</option></select></label>
+<label>Расшифровка<select id="decrypt"><option value="">Любой статус</option><option value="decrypted">Decrypted</option><option value="encrypted">Не подтверждено</option></select></label>
+<label>Взлом<select id="crack"><option value="">Любой статус</option><option value="cracked">Cracked</option><option value="notcracked">Не отмечено</option></select></label>
+<label>Сортировка<select id="sort"><option value="newest">Сначала новые</option><option value="oldest">Сначала старые</option><option value="title">По названию</option></select></label>
+<button id="applyFilters" class="full-button" type="button">Применить</button>
+<p class="hint">Некоторые характеристики определяются по описанию архива и могут быть неизвестны.</p>
+</aside>
+<section class="results"><div class="results-head"><strong id="resultCount">Загрузка…</strong><span>Источник: Internet Archive</span></div><div id="status" class="status">Загрузка каталога…</div><div id="resultsList" class="app-list"></div><div class="pager"><button id="prevPage" class="secondary" disabled>← Назад</button><span id="pageLabel">Страница 1</span><button id="nextPage" class="secondary">Дальше →</button></div></section>
+</div>
+<section class="other-sources"><h2>Другие архивы</h2><a href="https://ipaarchive.github.io/" target="_blank" rel="noopener">IPA Archive</a><a href="https://github.com/stuffed18/ipa-archive-updated" target="_blank" rel="noopener">IPA Archive Updated</a><a href="https://archive.org/details/ipaarchive?tab=collection" target="_blank" rel="noopener">Internet Archive collection</a></section>
+</main>
+<main id="detailView" class="hidden"><p class="back"><a href="./">← Назад к каталогу</a></p><div id="detailContent" class="status">Загрузка записи…</div></main>
+<footer><p>Независимый каталог ссылок на сторонние архивы. Доступность, безопасность и права на распространение файлов не гарантируются.</p><a href="https://archive.org/">Internet Archive</a></footer>
+</div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="app.js"></script>
+</body></html>
