@@ -27,7 +27,7 @@ function cleanText(value, max) {
 
 // Anonymous Firebase Auth users receive a globally unique guest number.
 // Enable Anonymous sign-in and App Check before deploying this function.
-exports.allocateGuest = onCall({ enforceAppCheck: true }, async (request) => {
+exports.allocateGuest = onCall(async (request) => {
   const user = requireAuth(request);
   const uid = user.uid;
   const profileRef = db.collection("guestProfiles").doc(uid);
@@ -55,7 +55,7 @@ exports.allocateGuest = onCall({ enforceAppCheck: true }, async (request) => {
 
 // Admin-only moderation. Ban expiry is a Firestore timestamp; null means permanent.
 
-exports.claimUsername = onCall({ enforceAppCheck: true }, async (request) => {
+exports.claimUsername = onCall(async (request) => {
   const user = requireAuth(request);
   if (user.token.firebase.sign_in_provider !== "password") {
     throw new HttpsError("failed-precondition", "Сначала создай пароль для гостевого аккаунта.");
@@ -93,7 +93,7 @@ exports.claimUsername = onCall({ enforceAppCheck: true }, async (request) => {
   return { username };
 });
 
-exports.updateProfile = onCall({ enforceAppCheck: true }, async (request) => {
+exports.updateProfile = onCall(async (request) => {
   const user = requireAuth(request);
   if (user.token.firebase.sign_in_provider !== "password") {
     throw new HttpsError("failed-precondition", "Профиль доступен после регистрации.");
@@ -109,7 +109,7 @@ exports.updateProfile = onCall({ enforceAppCheck: true }, async (request) => {
   return { ok: true };
 });
 
-exports.setUserBan = onCall({ enforceAppCheck: true }, async (request) => {
+exports.setUserBan = onCall(async (request) => {
   requireAdmin(request);
   const uid = cleanText(request.data.uid, 128);
   if (uid === request.auth.uid) throw new HttpsError("failed-precondition", "Нельзя заблокировать самого себя.");
@@ -120,7 +120,7 @@ exports.setUserBan = onCall({ enforceAppCheck: true }, async (request) => {
   return { ok: true };
 });
 
-exports.unbanUser = onCall({ enforceAppCheck: true }, async (request) => {
+exports.unbanUser = onCall(async (request) => {
   requireAdmin(request);
   const uid = cleanText(request.data.uid, 128);
   await db.collection("users").doc(uid).set({
@@ -129,14 +129,14 @@ exports.unbanUser = onCall({ enforceAppCheck: true }, async (request) => {
   return { ok: true };
 });
 
-exports.deleteComment = onCall({ enforceAppCheck: true }, async (request) => {
+exports.deleteComment = onCall(async (request) => {
   requireAdmin(request);
   const id = cleanText(request.data.commentId, 200);
   await db.collection("comments").doc(id).delete();
   return { ok: true };
 });
 
-exports.setAnnouncement = onCall({ enforceAppCheck: true }, async (request) => {
+exports.setAnnouncement = onCall(async (request) => {
   requireAdmin(request);
   const text = request.data.text == null ? "" : cleanText(request.data.text, 300);
   const ref = db.collection("site").doc("announcement");
@@ -148,7 +148,7 @@ exports.setAnnouncement = onCall({ enforceAppCheck: true }, async (request) => {
   return { ok: true };
 });
 
-exports.deleteUserPermanently = onCall({ enforceAppCheck: true }, async (request) => {
+exports.deleteUserPermanently = onCall(async (request) => {
   requireAdmin(request);
   const uid = cleanText(request.data.uid, 128);
   if (uid === request.auth.uid) throw new HttpsError("failed-precondition", "Нельзя удалить собственный аккаунт.");
