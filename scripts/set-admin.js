@@ -1,7 +1,7 @@
 "use strict";
 // Run locally with a Firebase service-account JSON kept OUTSIDE the repository:
 // GOOGLE_APPLICATION_CREDENTIALS=/absolute/path/service-account.json node scripts/set-admin.js adminchik
-const admin = require("firebase-admin");
+const admin = require("../functions/node_modules/firebase-admin");
 const username = process.argv[2];
 if (!username) throw new Error("Usage: node scripts/set-admin.js <username>");
 admin.initializeApp({ credential: admin.credential.applicationDefault() });
