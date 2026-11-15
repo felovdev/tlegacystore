@@ -54,6 +54,61 @@ exports.allocateGuest = onCall({ enforceAppCheck: true }, async (request) => {
 });
 
 // Admin-only moderation. Ban expiry is a Firestore timestamp; null means permanent.
+
+exports.claimUsername = onCall({ enforceAppCheck: true }, async (request) => {
+  const user = requireAuth(request);
+  if (user.token.firebase.sign_in_provider !== "password") {
+    throw new HttpsError("failed-precondition", "Сначала создай пароль для гостевого аккаунта.");
+  }
+  const username = cleanText(request.data.username, 24);
+  if (!/^[a-zA-Z0-9_]{3,24}$/.test(username) || username.toLowerCase().startsWith("guest_")) {
+    throw new HttpsError("invalid-argument", "Логин: 3–24 символа, латиница, цифры и _; guest_ зарезервирован.");
+  }
+  const key = username.toLowerCase();
+  const nameRef = db.collection("usernames").doc(key);
+  const profileRef = db.collection("users").doc(user.uid);
+  await db.runTransaction(async (tx) => {
+    const nameDoc = await tx.get(nameRef);
+    if (nameDoc.exists && nameDoc.data().uid !== user.uid) {
+      throw new HttpsError("already-exists", "Этот логин уже занят.");
+    }
+    tx.set(nameRef, { uid: user.uid, username });
+    tx.set(profileRef, {
+      username, isGuest: false, createdAt: admin.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+  });
+  const guestRef = db.collection("guestProfiles").doc(user.uid);
+  const guest = await guestRef.get();
+  if (guest.exists) {
+    const comments = await db.collection("comments").where("ownerUid", "==", user.uid).get();
+    for (let i = 0; i < comments.docs.length; i += 400) {
+      const batch = db.batch();
+      comments.docs.slice(i, i + 400).forEach(doc => batch.update(doc.ref, {
+        name: username, isGuest: false
+      }));
+      await batch.commit();
+    }
+    await guestRef.delete();
+  }
+  return { username };
+});
+
+exports.updateProfile = onCall({ enforceAppCheck: true }, async (request) => {
+  const user = requireAuth(request);
+  if (user.token.firebase.sign_in_provider !== "password") {
+    throw new HttpsError("failed-precondition", "Профиль доступен после регистрации.");
+  }
+  const bio = request.data.bio == null ? "" : String(request.data.bio).trim().slice(0, 240);
+  const avatarUrl = request.data.avatarUrl == null ? "" : String(request.data.avatarUrl).trim().slice(0, 500);
+  if (avatarUrl && !/^https:\/\//i.test(avatarUrl)) {
+    throw new HttpsError("invalid-argument", "Аватар должен быть HTTPS-ссылкой.");
+  }
+  await db.collection("users").doc(user.uid).set({
+    bio, avatarUrl, updatedAt: admin.firestore.FieldValue.serverTimestamp()
+  }, { merge: true });
+  return { ok: true };
+});
+
 exports.setUserBan = onCall({ enforceAppCheck: true }, async (request) => {
   requireAdmin(request);
   const uid = cleanText(request.data.uid, 128);
