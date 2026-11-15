@@ -3,16 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#263746">
+<meta name="theme-color" content="#101722">
 <meta name="description" content="IPA Catalog — поиск архивных iOS-приложений и игр">
-<title>IPA Catalog</title>
+<title>TLegacyStore — IPA архив</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header class="site-header"><div class="wrap header-inner"><a class="logo" href="./">IPA CATALOG</a><span class="header-sub">iOS apps archive</span><a class="github-link" href="https://github.com/felovdev/tlegacystore">GitHub</a></div></header>
+<header class="site-header"><div class="wrap header-inner"><a class="logo" href="./">TLEGACYSTORE</a><span class="header-sub">iOS apps archive</span><div class="account-actions"><button id="themeToggle" class="secondary" type="button">☾ Тема</button><button id="accountOpen" type="button">Войти</button></div><a class="github-link" href="https://github.com/felovdev/tlegacystore">GitHub</a></div></header>
 <div class="wrap">
 <main id="homeView">
-<section class="intro"><h1>Каталог IPA-приложений</h1><p>Поиск приложений и игр из архивных коллекций. Выбери запись, чтобы посмотреть подробности, файлы и комментарии.</p></section>
+<section id="announcement" class="announcement hidden"></section><section class="intro"><h1>Каталог IPA-приложений</h1><p>Поиск приложений и игр из архивных коллекций. Выбери запись, чтобы посмотреть подробности, файлы и комментарии.</p></section>
 <form id="searchForm" class="searchbar"><input id="searchInput" type="search" placeholder="Поиск по названию…" autocomplete="off"><button type="submit">Найти</button></form>
 <div class="layout">
 <aside class="filters">
@@ -32,10 +32,13 @@
 <section class="other-sources"><h2>Другие архивы</h2><a href="https://ipaarchive.github.io/" target="_blank" rel="noopener">IPA Archive</a><a href="https://github.com/stuffed18/ipa-archive-updated" target="_blank" rel="noopener">IPA Archive Updated</a><a href="https://archive.org/details/ipaarchive?tab=collection" target="_blank" rel="noopener">Internet Archive collection</a></section>
 </main>
 <main id="detailView" class="hidden"><p class="back"><a href="./">← Назад к каталогу</a></p><div id="detailContent" class="status">Загрузка записи…</div></main>
-<footer><p>Независимый каталог ссылок на сторонние архивы. Доступность, безопасность и права на распространение файлов не гарантируются.</p><a href="https://archive.org/">Internet Archive</a></footer>
+<footer><p><button id="contactOpen" class="text-button" type="button">Контакты</button></p><p>Независимый каталог ссылок на сторонние архивы. Доступность, безопасность и права на распространение файлов не гарантируются.</p><a href="https://archive.org/">Internet Archive</a></footer>
 </div>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
 <script src="firebase-config.js"></script>
 <script src="app.js"></script>
+<script src="account.js"></script>
 </body></html>
